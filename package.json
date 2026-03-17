@@ -1,0 +1,12 @@
+{
+  "name": "windy-city-whispers",
+  "workspaces": ["frontend", "functions"], 
+  "scripts": {
+    "dev-frontend": "npm run dev --prefix frontend",
+    "dev-functions": "npm run serve --prefix functions",
+    "dev": "concurrently \"npm run dev-frontend\" \"npm run dev-functions\""
+  },
+  "devDependencies": {
+    "concurrently": "latest"
+  }
+}
