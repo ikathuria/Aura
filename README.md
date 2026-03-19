@@ -1,16 +1,20 @@
 # Aura
 
-**Aura** is a mobile-first, gamified city exploration app that unlocks cinematic, personalized micro-stories at Chicago landmarks. It replaces generic tours with AI-generated storytelling that adapts local history to a user's unique interests and assigned persona.
+**Aura** is a mobile-first, gamified city exploration app that unlocks cinematic, personalized micro-stories at important city landmarks. Think Pokemon Go meets a personalized tour guide. It replaces generic tours with AI-generated storytelling that adapts local history to a user's unique interests and assigned persona.
 
 ## Product Vision
-Create a living, personalized map of Chicago where each landmark becomes a short, cinematic story tailored to who you are and what you care about.
+Create a living, personalized map of landmarks where each landmark becomes a short, cinematic story tailored to who you are and what you care about.
 
 ## User Experience Flow
 1. **Onboarding**: Select your interests. The app assigns a persona (e.g., "The Techie") and saves your profile to Supabase.
-2. **Discovery**: Explore a map featuring Chicago landmarks.
+2. **Discovery**: Explore a map featuring landmarks.
 3. **Unlocking**: Visit a landmark (within 50m) to unlock its story.
 4. **Cinematic Reward**: An AI-generated, immersive story plays instantly, narrated through the lens of your persona.
 5. **Gallery**: All unlocked stories are saved to your personal gallery.
+
+# TODO
+1. Add a toggle for users to switch between tourist mode and local mode. In local mode, the user can explore current events happening around them
+2. Add a day itinerary planner where user can select landmarks they want to visit and the app will create a itinerary for them based on best possible route based on where they are currently located and where all they want to go
 
 ## Tech Stack (Modern & Open-Source)
 - **Frontend**: Next.js 15 + Tailwind CSS + Framer Motion

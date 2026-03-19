@@ -17,23 +17,18 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     )
 
-    const { uid, personaId, personaTitle } = await req.json()
-    
-    const now = Date.now()
-    
-    const { error: statusError } = await supabaseClient
-      .from('asset_status')
-      .upsert({
-        user_id: uid,
-        landmarkId: 'cloud-gate',
-        personaId: personaId,
-        status: 'queued',
-        updatedAt: now
-      })
+    // Clear user-specific data for a full reset (demo purpose)
+    // In a real app, you'd filter by user_id if calling from a specific user
+    const { error: error1 } = await supabaseClient.from('unlocks').delete().neq('landmarkId', '')
+    const { error: error2 } = await supabaseClient.from('landmark_assets').delete().neq('landmarkId', '')
+    const { error: error3 } = await supabaseClient.from('gallery').delete().neq('landmarkId', '')
+    const { error: error4 } = await supabaseClient.from('asset_status').delete().neq('landmarkId', '')
 
-    if (statusError) throw statusError
+    if (error1 || error2 || error3 || error4) {
+      throw error1 || error2 || error3 || error4
+    }
 
-    return new Response(JSON.stringify({ success: true, queued: 1 }), {
+    return new Response(JSON.stringify({ success: true }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 200,
     })
