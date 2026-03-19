@@ -1,87 +1,118 @@
-import {
-  collection,
-  doc,
-  getDoc,
-  getDocs,
-  setDoc
-} from 'firebase/firestore';
-import { db } from './firebase';
+import { supabase } from './supabase';
 import { SEED_LANDMARKS } from './seedLandmarks';
 import type { AssetStatus, CinematicAsset, GalleryItem, Landmark, Unlock, UserProfile } from '../types';
 
 export async function fetchLandmarks(): Promise<Landmark[]> {
-  if (!db) return SEED_LANDMARKS;
-  const snapshot = await getDocs(collection(db, 'landmarks'));
-  if (snapshot.empty) return SEED_LANDMARKS;
-  return snapshot.docs.map((docSnap) => ({
-    id: docSnap.id,
-    name: docSnap.data().name,
-    lat: docSnap.data().lat,
-    lng: docSnap.data().lng,
-    description: docSnap.data().description || '',
-    type: docSnap.data().type || 'historic'
+  const { data, error } = await supabase.from('landmarks').select('*');
+  if (error || !data || data.length === 0) return SEED_LANDMARKS;
+  return data.map((item: any) => ({
+    id: item.id,
+    name: item.name,
+    lat: item.lat,
+    lng: item.lng,
+    description: item.description || '',
+    type: item.type || 'historic'
   }));
 }
 
 export async function fetchUserProfile(uid: string): Promise<UserProfile | null> {
-  if (!db) return null;
-  const snapshot = await getDoc(doc(db, 'users', uid));
-  if (!snapshot.exists()) return null;
-  return snapshot.data() as UserProfile;
+  const { data, error } = await supabase
+    .from('users')
+    .select('*')
+    .eq('id', uid)
+    .single();
+  
+  if (error || !data) return null;
+  // Supabase returns the columns as keys. Since we used camelCase in DB, these match UserProfile.
+  return data as UserProfile;
 }
 
 export async function saveUserProfile(uid: string, profile: UserProfile): Promise<void> {
-  if (!db) return;
-  await setDoc(doc(db, 'users', uid), profile, { merge: true });
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const { uid: _, ...rest } = profile;
+  const { error } = await supabase
+    .from('users')
+    .upsert({ id: uid, ...rest });
+  
+  if (error) {
+    console.error('Error saving profile to Supabase:', error);
+    throw error;
+  }
 }
 
 export async function fetchUnlocks(uid: string): Promise<Unlock[]> {
-  if (!db) return [];
-  const snapshot = await getDocs(collection(db, 'users', uid, 'unlocks'));
-  return snapshot.docs.map((docSnap) => ({
-    landmarkId: docSnap.id,
-    unlockedAt: docSnap.data().unlockedAt || Date.now()
+  const { data, error } = await supabase
+    .from('unlocks')
+    .select('*')
+    .eq('user_id', uid);
+  
+  if (error || !data) return [];
+  return data.map((item: any) => ({
+    landmarkId: item.landmarkId,
+    unlockedAt: item.unlockedAt ? new Date(item.unlockedAt).getTime() : Date.now()
   }));
 }
 
 export async function unlockLandmark(uid: string, landmarkId: string): Promise<void> {
-  if (!db) return;
-  await setDoc(doc(db, 'users', uid, 'unlocks', landmarkId), {
-    unlockedAt: Date.now()
-  });
+  const { error } = await supabase
+    .from('unlocks')
+    .insert({
+      user_id: uid,
+      landmarkId: landmarkId,
+      unlockedAt: new Date().toISOString()
+    });
+  
+  if (error) {
+    console.warn('Error unlocking landmark in Supabase:', error);
+  }
 }
 
 export async function fetchGallery(uid: string): Promise<GalleryItem[]> {
-  if (!db) return [];
-  const snapshot = await getDocs(collection(db, 'users', uid, 'gallery'));
-  return snapshot.docs.map((docSnap) => ({
-    landmarkId: docSnap.id,
-    landmarkName: docSnap.data().landmarkName || undefined,
-    savedAt: docSnap.data().savedAt || Date.now(),
-    videoUrl: docSnap.data().videoUrl || null,
-    audioUrl: docSnap.data().audioUrl || null,
-    imageUrl: docSnap.data().imageUrl || null,
-    script: docSnap.data().script || null
-  }));
-}
-
-export async function saveGalleryItem(uid: string, item: GalleryItem): Promise<void> {
-  if (!db) return;
-  await setDoc(doc(db, 'users', uid, 'gallery', item.landmarkId), {
-    savedAt: item.savedAt || Date.now(),
-    landmarkName: item.landmarkName || null,
+  const { data, error } = await supabase
+    .from('gallery')
+    .select('*')
+    .eq('user_id', uid);
+  
+  if (error || !data) return [];
+  return data.map((item: any) => ({
+    landmarkId: item.landmarkId,
+    landmarkName: item.landmarkName || undefined,
+    savedAt: item.savedAt ? new Date(item.savedAt).getTime() : Date.now(),
     videoUrl: item.videoUrl || null,
     audioUrl: item.audioUrl || null,
     imageUrl: item.imageUrl || null,
     script: item.script || null
-  });
+  }));
+}
+
+export async function saveGalleryItem(uid: string, item: GalleryItem): Promise<void> {
+  const { error } = await supabase
+    .from('gallery')
+    .upsert({
+      user_id: uid,
+      landmarkId: item.landmarkId,
+      landmarkName: item.landmarkName || null,
+      savedAt: item.savedAt ? new Date(item.savedAt).toISOString() : new Date().toISOString(),
+      videoUrl: item.videoUrl || null,
+      audioUrl: item.audioUrl || null,
+      imageUrl: item.imageUrl || null,
+      script: item.script || null
+    });
+  
+  if (error) {
+    console.error('Error saving gallery item to Supabase:', error);
+  }
 }
 
 export async function fetchCinematicAsset(landmarkId: string, personaId: string): Promise<CinematicAsset | null> {
-  if (!db) return null;
-  const snapshot = await getDoc(doc(db, 'landmarks', landmarkId, 'assets', personaId));
-  if (!snapshot.exists()) return null;
-  const data = snapshot.data();
+  const { data, error } = await supabase
+    .from('landmark_assets')
+    .select('*')
+    .eq('landmarkId', landmarkId)
+    .eq('personaId', personaId)
+    .single();
+  
+  if (error || !data) return null;
   return {
     landmarkId,
     personaId,
@@ -94,24 +125,29 @@ export async function fetchCinematicAsset(landmarkId: string, personaId: string)
 }
 
 export async function fetchAssetStatuses(uid: string): Promise<Record<string, AssetStatus>> {
-  if (!db) return {};
-  const snapshot = await getDocs(collection(db, 'users', uid, 'assetStatus'));
+  const { data, error } = await supabase
+    .from('asset_status')
+    .select('*')
+    .eq('user_id', uid);
+  
+  if (error || !data) return {};
   const statusMap: Record<string, AssetStatus> = {};
-  snapshot.docs.forEach((docSnap) => {
-    const data = docSnap.data();
-    statusMap[docSnap.id] = {
-      landmarkId: docSnap.id,
-      personaId: data.personaId || '',
-      status: data.status || 'queued',
-      updatedAt: data.updatedAt || undefined
+  data.forEach((item: any) => {
+    statusMap[item.landmarkId] = {
+      landmarkId: item.landmarkId,
+      personaId: item.personaId || '',
+      status: item.status || 'queued',
+      updatedAt: item.updatedAt ? Number(item.updatedAt) : undefined
     };
   });
   return statusMap;
 }
+
 export async function resetAssets(): Promise<{ success: boolean }> {
-  const { getFunctions, httpsCallable } = await import('firebase/functions');
-  const functions = getFunctions();
-  const resetAssetsFn = httpsCallable<{ success: boolean }>(functions, 'resetAssets');
-  const result = await resetAssetsFn();
-  return result.data as { success: boolean };
+  const { data, error } = await supabase.functions.invoke('reset-assets');
+  if (error) {
+    console.error('Error invoking reset-assets:', error);
+    return { success: false };
+  }
+  return data as { success: boolean };
 }

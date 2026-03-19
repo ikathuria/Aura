@@ -1,13 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import {
-  GoogleAuthProvider,
-  signInWithEmailAndPassword,
-  signInWithPopup,
-  createUserWithEmailAndPassword
-} from 'firebase/auth';
-import { auth } from '../lib/firebase';
+import { supabase } from '../lib/supabase';
 
 export const AuthGate: React.FC = () => {
   const [email, setEmail] = useState('');
@@ -17,11 +11,16 @@ export const AuthGate: React.FC = () => {
   const [busy, setBusy] = useState(false);
 
   const handleGoogle = async () => {
-    if (!auth) return;
     setBusy(true);
     setError(null);
     try {
-      await signInWithPopup(auth, new GoogleAuthProvider());
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: window.location.origin
+        }
+      });
+      if (error) throw error;
     } catch (err) {
       setError('Google sign-in failed.');
     } finally {
@@ -30,17 +29,18 @@ export const AuthGate: React.FC = () => {
   };
 
   const handleEmail = async () => {
-    if (!auth) return;
     setBusy(true);
     setError(null);
     try {
       if (mode === 'signin') {
-        await signInWithEmailAndPassword(auth, email, password);
+        const { error } = await supabase.auth.signInWithPassword({ email, password });
+        if (error) throw error;
       } else {
-        await createUserWithEmailAndPassword(auth, email, password);
+        const { error } = await supabase.auth.signUp({ email, password });
+        if (error) throw error;
       }
-    } catch (err) {
-      setError('Email sign-in failed.');
+    } catch (err: any) {
+      setError(err.message || 'Email sign-in/up failed.');
     } finally {
       setBusy(false);
     }
@@ -50,8 +50,10 @@ export const AuthGate: React.FC = () => {
     <div className="min-h-screen bg-ink flex items-center justify-center p-6 text-white">
       <div className="w-full max-w-md space-y-6">
         <div className="text-center space-y-2">
-          <h1 className="text-3xl font-bold text-gold">Windy City Whispers</h1>
-          <p className="text-zinc-400">Sign in to begin your exploration.</p>
+          <h1 className="text-5xl font-black tracking-tighter text-white">
+            AURA
+          </h1>
+          <p className="text-zinc-500 font-medium">Global City Exploration</p>
         </div>
 
         <button

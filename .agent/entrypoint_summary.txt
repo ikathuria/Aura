@@ -1,0 +1,55 @@
+﻿Entry points / modules / config summary for WinddyCityWhispers:
+
+Repo structure & runtime entry points
+- Frontend (Next.js app router):
+  - Entry: frontend/app/page.tsx (main UI + state orchestration)
+  - Layout: frontend/app/layout.tsx
+  - Styles: frontend/app/globals.css
+  - Next config: frontend/next.config.mjs
+  - Main modules: frontend/lib/* (firebase, data, geo, persona, assetService) and frontend/components/* (UI)
+  - NOTE: frontend/App.tsx + frontend/index.tsx + frontend/vite.config.ts look like leftover Vite/CRA artifacts; Next uses app/*.
+- Functions (Firebase):
+  - Entry: functions/index.js (exports callable functions + Firestore trigger)
+  - Config: firebase.json -> functions source "functions"
+- Backend (Node/Express proxy):
+  - Entry: backend/server.js
+  - Scripts: backend/package.json (start/dev)
+  - Not part of root workspaces; likely optional/standalone
+
+Configuration files
+- Root package.json: workspaces [frontend, functions]; scripts for dev-frontend/dev-functions/dev (concurrently)
+- frontend/.env.local + .env.local.example: NEXT_PUBLIC_FIREBASE_*, maps API key, functions emulator, toggles
+- backend/.env.local: env for proxy (GOOGLE_CLOUD_PROJECT/LOCATION/PROXY_HEADER, etc.)
+- functions env: via Firebase runtime (see README)
+- Tailwind: frontend/tailwind.config.ts + postcss.config.cjs
+- TS: frontend/tsconfig.json
+
+Key flows (runtime)
+1) Frontend bootstrap (frontend/app/page.tsx)
+   - Firebase Auth via frontend/lib/firebase.ts; waits for onAuthStateChanged.
+   - On login: loads user profile, landmarks, unlocks, gallery, asset statuses from Firestore via frontend/lib/data.ts.
+   - If Firestore unavailable: falls back to localStorage + SEED_LANDMARKS.
+   - Onboarding chooses interests -> persona; saves profile; triggers prefetch.
+   - Geolocation watch: if user enters 50m of a landmark, unlocks it and opens modal.
+   - Cinematic modal fetches asset doc for persona/landmark; gallery save stores to Firestore.
+   - Asset prefetch: frontend/lib/assetService.ts calls callable function prefetchPersonaAssets when enabled.
+
+2) Firebase Functions pipeline (functions/index.js)
+   - Callable functions:
+     - assignPersona: maps interests -> persona
+     - getCinematicAsset: returns cached asset or queued
+     - prefetchPersonaAssets: creates assetStatus + videoJobs docs
+     - resetAssets: clears assetStatus + videoJobs for user
+   - Firestore trigger: processVideoJob on videoJobs/{jobId}
+     - Builds prompt (Gemini), calls Veo video generation, waits for output in GCS
+     - Adds download tokens, runs TTS, writes URLs + status to Firestore
+
+3) Optional backend proxy (backend/server.js)
+   - Express /api-proxy with rate limiting, ADC auth, and header gate (x-app-proxy)
+   - Proxies to Vertex AI endpoints; handles streaming transforms
+
+Notable modules
+- frontend/lib/firebase.ts: Firebase init + Functions emulator support
+- frontend/lib/data.ts: Firestore access for landmarks, profile, unlocks, gallery, assets
+- frontend/lib/assetService.ts: callable function client
+- frontend/services/geminiService.ts: client-side AI calls intentionally disabled

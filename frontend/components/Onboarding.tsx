@@ -43,13 +43,20 @@ export const Onboarding: React.FC<OnboardingProps> = ({ onComplete, uid, display
         {/* Logo / Header */}
         <div className="text-center space-y-2">
           <h1 className="text-4xl font-bold bg-gradient-to-r from-yellow-500 to-amber-600 bg-clip-text text-transparent">
-            Windy City Whispers
+            Aura
           </h1>
-          <p className="text-zinc-400">Discover Chicago stories that match your interests.</p>
+          <p className="text-zinc-400">Personalized city exploration powered by AI.</p>
         </div>
 
         {step === 'interests' && (
           <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+            <div className="space-y-4">
+            <h1 className="text-4xl font-bold tracking-tight text-white">Welcome to Aura</h1>
+            <p className="text-lg text-zinc-400">
+              Your personalized journey through the world's most iconic cities begins here.
+            </p>
+          </div>
+            
             <div className="space-y-1">
               <h2 className="text-xl font-semibold">What interests you?</h2>
               <p className="text-sm text-zinc-400">We'll customize your journey based on this.</p>

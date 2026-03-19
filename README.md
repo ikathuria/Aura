@@ -1,183 +1,67 @@
-# Windy City Whispers
+# Aura
 
-Windy City Whispers is a mobile-first, gamified city exploration app that unlocks cinematic, personalized micro-stories at Chicago landmarks. It replaces generic tours with AI-generated, "sketch-to-reality" shorts that adapt local history to a user's interests.
+**Aura** is a mobile-first, gamified city exploration app that unlocks cinematic, personalized micro-stories at Chicago landmarks. It replaces generic tours with AI-generated storytelling that adapts local history to a user's unique interests and assigned persona.
 
-**Product Vision**
+## Product Vision
 Create a living, personalized map of Chicago where each landmark becomes a short, cinematic story tailored to who you are and what you care about.
 
-## Vision Overview
+## User Experience Flow
+1. **Onboarding**: Select your interests. The app assigns a persona (e.g., "The Techie") and saves your profile to Supabase.
+2. **Discovery**: Explore a map featuring Chicago landmarks.
+3. **Unlocking**: Visit a landmark (within 50m) to unlock its story.
+4. **Cinematic Reward**: An AI-generated, immersive story plays instantly, narrated through the lens of your persona.
+5. **Gallery**: All unlocked stories are saved to your personal gallery.
 
-**Core Idea**
-Spatial RAG merges a user's interests with a landmark's historical context to generate a bespoke cinematic short (8 seconds, sketch-to-watercolor) with AI narration.
-
-**User Experience Flow**
-1. **Onboarding**: Pick interests. The app assigns a persona (e.g., "The Techie") and prefetches nearby landmark assets.
-2. **Discovery**: Landmarks appear as fogged markers. Entering a geofence unlocks a landmark.
-3. **Reward**: A full-screen cinematic plays with personalized narration, then saves to the gallery.
-4. **Progression**: Badges unlock, hidden gems reveal after milestones.
-
-## MVP Scope (What Ships First)
-
-- Google Sign-in + interest selection
-- Persona assignment and caching
-- Chicago map with landmarks
-- Geofence-based unlocks
-- Cinematic playback + gallery storage
-- Asset prefetch for nearby landmarks
-- Status indicators per landmark (queued / generating / ready / failed)
-
-## Phased Roadmap
-
-**Phase 0: Prototype**
-- Static map + demo markers
-- Basic UI and onboarding
-
-**Phase 1: MVP**
-- Firebase Auth + Firestore
-- Prefetch pipeline with queued jobs
-- Status indicators and cinematic playback
-
-**Phase 2: Production Beta**
-- Hidden gems + badge progression
-- Better map theming + accessibility
-- Social sharing
-
-**Phase 3: Scale**
-- Multi-city support
-- Paid personalization tiers
-- Creator partnerships
-
-## Architecture & Stack
-
+## Tech Stack (Modern & Open-Source)
 - **Frontend**: Next.js 15 + Tailwind CSS + Framer Motion
-- **Maps**: Google Maps JavaScript API
-- **Auth**: Firebase Auth (Google + Email)
-- **Database**: Firestore
-- **Storage**: Firebase Storage (cached cinematic video/audio)
-- **Functions**: Firebase Cloud Functions v2 (Node.js 24)
-- **AI**:
-  - Gemini (persona + script)
-  - Veo 3.1 (video generation)
-  - Google Cloud Text-to-Speech (audio narration)
+- **Maps**: Leaflet + OpenStreetMap (100% Free)
+- **Backend & Auth**: Supabase (PostgreSQL + GoTrue)
+- **AI Engine**: Hugging Face Inference API (Mistral 7B / Llama 3)
+- **Edge Functions**: Supabase Edge Functions (Deno)
 
-## Data Model (Firestore)
+## Getting Started
 
-- `users/{uid}`
-- `users/{uid}/unlocks/{landmarkId}`
-- `users/{uid}/gallery/{landmarkId}`
-- `users/{uid}/assetStatus/{landmarkId}`
-- `users/{uid}/logs/{logId}`
-- `landmarks/{landmarkId}`
-- `landmarks/{landmarkId}/assets/{personaId}`
-- `videoJobs/{jobId}`
+### 1) Prerequisites
+- [Supabase CLI](https://supabase.com/docs/guides/cli) installed.
+- [Hugging Face Token](https://huggingface.co/settings/tokens) (Free).
 
-## AI Asset Pipeline
-
-1. **Onboarding** triggers `assignPersona` callable.
-2. **Prefetch** triggers `prefetchPersonaAssets` callable:
-   - Creates `videoJobs` for the nearest or preferred landmarks.
-3. **Firestore trigger** `processVideoJob`:
-   - Generates video (Veo)
-   - Generates narration (TTS)
-   - Uploads outputs to Firebase Storage
-   - Writes `landmarks/{landmarkId}/assets/{personaId}`
-   - Updates `users/{uid}/assetStatus/{landmarkId}` to `ready`
-
-Status values used on the map:
-- `queued`
-- `generating`
-- `ready`
-- `failed`
-
-## Google Cloud + Firebase Setup
-
-**Required APIs**
-- Cloud Functions
-- Cloud Build
-- Artifact Registry
-- Cloud Run
-- Eventarc
-- Pub/Sub
-- Cloud Storage
-- Vertex AI
-- Cloud Text-to-Speech
-
-**IAM (Service Account)**
-The default compute service account is:
-`119035514970-compute@developer.gserviceaccount.com`
-
-Recommended roles:
-- `roles/aiplatform.user`
-- `roles/storage.objectAdmin`
-- (Optional) `roles/texttospeech.user` if TTS permission errors appear
-
-## Local Setup
-
-### 1) Frontend environment variables
-Create `C:\Users\ikath\OneDrive\GitHub\WinddyCityWhispers\frontend\.env.local`:
-
+### 2) Supabase Setup
+Initialize your database by running the schema in the Supabase SQL Editor:
+```sql
+-- See supabase_schema.sql in the artifacts for the full script.
 ```
-NEXT_PUBLIC_FIREBASE_API_KEY=...
-NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=...
-NEXT_PUBLIC_FIREBASE_PROJECT_ID=...
-NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=...
-NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=...
-NEXT_PUBLIC_FIREBASE_APP_ID=...
-NEXT_PUBLIC_GOOGLE_MAPS_API_KEY=...
-NEXT_PUBLIC_USE_FUNCTIONS=true
+
+Set your Hugging Face Token in Supabase Secrets:
+```bash
+npx supabase secrets set HUGGING_FACE_TOKEN=your_token_here
+```
+
+Deploy the Edge Functions:
+```bash
+npx supabase functions deploy prefetch-persona-assets --no-verify-jwt
+npx supabase functions deploy generate-story-script --no-verify-jwt
+```
+
+### 3) Frontend Setup
+Create `frontend/.env.local`:
+```env
+NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
 NEXT_PUBLIC_TEST_UNLOCK_IDS=cloud-gate,navy-pier
-NEXT_PUBLIC_FUNCTIONS_EMULATOR=localhost:5001
-NEXT_PUBLIC_FIRESTORE_LONG_POLLING=true
 ```
 
-Remove `NEXT_PUBLIC_FUNCTIONS_EMULATOR` when using deployed functions.
-
-### 2) Install dependencies
-
-```
+### 4) Run the App
+```bash
+# In the root directory
 npm install
+npm run dev
 ```
 
-### 3) Run the frontend
+## AI Story Pipeline
+1. When a landmark is clicked, the app checks if a personalized story exists in `landmark_assets`.
+2. If missing, it triggers the `generate-story-script` Edge Function.
+3. The function calls **Hugging Face (Mistral 7B)** to weave a 60-word immersive script based on the landmark's context and user's persona.
+4. The result is saved to the database and played in the UI.
 
-```
-npm run dev-frontend
-```
-
-### 4) Run Functions locally (optional)
-
-```
-npm run dev-functions
-```
-
-## Functions Runtime Environment
-
-Set these for deployed functions or local emulation:
-
-```
-GOOGLE_CLOUD_PROJECT=your-gcp-project-id
-GOOGLE_CLOUD_LOCATION=us-central1
-VEO_MODEL_ID=veo-3.1-generate-001
-VEO_OUTPUT_BUCKET=your-firebase-storage-bucket
-VEO_OUTPUT_PREFIX=cinematics
-PREFETCH_LIMIT=10
-PREFETCH_IDS=cloud-gate,navy-pier
-TTS_LANGUAGE_CODE=en-US
-TTS_VOICE_NAME=en-US-Neural2-D
-TTS_AUDIO_ENCODING=MP3
-```
-
-## Deployment (Functions)
-
-```
-npm run deploy --prefix functions
-```
-
-If Eventarc or Pub/Sub permission errors appear, ensure the project IAM bindings are in place and retry after a few minutes.
-
-## Testing Notes
-
-- Landmark data falls back to a local seed list if Firestore is empty.
-- Prefetch runs once per profile unless asset status documents are cleared.
-- Chrome extension console errors can be ignored during local dev.
-
+## Legacy Note
+This project was migrated from a Google/Firebase stack (Vertex AI, Google Maps, Firestore) to its current open-source-first architecture to ensure sustainability and developer freedom.

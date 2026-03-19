@@ -1,13 +1,18 @@
 'use client';
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { onAuthStateChanged, signOut, type User } from 'firebase/auth';
-import { auth, firebaseReady } from '../lib/firebase';
+import dynamic from 'next/dynamic';
+import { supabase } from '../lib/supabase';
+import type { User } from '@supabase/supabase-js';
 import { AuthGate } from '../components/AuthGate';
 import { Onboarding } from '../components/Onboarding';
-import { MapView } from '../components/MapView';
 import { CinematicModal } from '../components/LandmarkModal';
 import { UserProfileModal } from '../components/UserProfileModal';
+
+const MapView = dynamic(
+  () => import('../components/MapView').then((mod) => mod.MapView),
+  { ssr: false }
+);
 import {
   fetchAssetStatuses,
   fetchCinematicAsset,
@@ -21,14 +26,14 @@ import {
   resetAssets
 } from '../lib/data';
 import { getDistanceMeters } from '../lib/geo';
-import { prefetchPersonaAssets } from '../lib/assetService';
+import { prefetchPersonaAssets, generateStoryScript } from '../lib/assetService';
 import { SEED_LANDMARKS } from '../lib/seedLandmarks';
 import type { AssetStatus, CinematicAsset, GalleryItem, Landmark, UserProfile } from '../types';
 
-const CHICAGO_CENTER = { lat: 41.882, lng: -87.629 };
-const LOCAL_PROFILE_KEY = 'wcw_profile';
-const LOCAL_UNLOCKS_KEY = 'wcw_unlocks';
-const LOCAL_GALLERY_KEY = 'wcw_gallery';
+const DEFAULT_CENTER = { lat: 41.882, lng: -87.629 };
+const LOCAL_PROFILE_KEY = 'aura_profile';
+const LOCAL_UNLOCKS_KEY = 'aura_unlocks';
+const LOCAL_GALLERY_KEY = 'aura_gallery';
 
 function readLocal<T>(key: string): T | null {
   try {
@@ -73,12 +78,19 @@ export default function Page() {
   const prefetchTriggeredRef = useRef(false);
 
   useEffect(() => {
-    if (!auth) return;
-    const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
-      setUser(firebaseUser);
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setUser(session?.user ?? null);
       setAuthChecked(true);
     });
-    return () => unsubscribe();
+
+    const {
+      data: { subscription }
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null);
+      setAuthChecked(true);
+    });
+
+    return () => subscription.unsubscribe();
   }, []);
 
   useEffect(() => {
@@ -87,11 +99,11 @@ export default function Page() {
     const load = async () => {
       try {
         const [profileData, landmarkData, unlockData, galleryData, statusData] = await Promise.all([
-          fetchUserProfile(user.uid),
+          fetchUserProfile(user.id),
           fetchLandmarks(),
-          fetchUnlocks(user.uid),
-          fetchGallery(user.uid),
-          fetchAssetStatuses(user.uid)
+          fetchUnlocks(user.id),
+          fetchGallery(user.id),
+          fetchAssetStatuses(user.id)
         ]);
         if (profileData) setProfile(profileData);
         setLandmarks(landmarkData);
@@ -119,7 +131,7 @@ export default function Page() {
     if (!user) return;
     const interval = setInterval(async () => {
       try {
-        const statuses = await fetchAssetStatuses(user.uid);
+        const statuses = await fetchAssetStatuses(user.id);
         setAssetStatuses(statuses);
       } catch (error) {
         console.warn('[status] failed to refresh asset statuses', error);
@@ -134,11 +146,11 @@ export default function Page() {
     if (Object.keys(assetStatuses).length > 0) return;
     prefetchTriggeredRef.current = true;
     console.info('[prefetch] triggering asset synthesis', {
-      uid: user.uid,
+      uid: user.id,
       personaId: profile.personaId
     });
     prefetchPersonaAssets({
-      uid: user.uid,
+      uid: user.id,
       personaId: profile.personaId,
       personaTitle: profile.personaTitle
     });
@@ -154,9 +166,9 @@ export default function Page() {
     });
     seedUnlocks.forEach(async (landmarkId) => {
       try {
-        await unlockLandmark(user.uid, landmarkId);
+        await unlockLandmark(user.id, landmarkId);
       } catch (error) {
-        console.warn('[unlock] Firestore unavailable, stored locally.', error);
+        console.warn('[unlock] Supabase unavailable, stored locally.', error);
       }
     });
   }, [user, landmarks, testUnlockCount]);
@@ -180,7 +192,7 @@ export default function Page() {
     });
     effectiveIds.forEach(async (landmarkId) => {
       try {
-        await unlockLandmark(user.uid, landmarkId);
+        await unlockLandmark(user.id, landmarkId);
       } catch (error) {
         console.warn('[unlock] Firestore unavailable, stored locally.', error);
       }
@@ -208,11 +220,11 @@ export default function Page() {
     const distanceFromChicago = getDistanceMeters(
       userLocation.lat,
       userLocation.lng,
-      CHICAGO_CENTER.lat,
-      CHICAGO_CENTER.lng
+      DEFAULT_CENTER.lat,
+      DEFAULT_CENTER.lng
     );
-    if (distanceFromChicago > 20000) {
-      setMapNotice('You are outside Chicago. Map centered on landmarks for preview.');
+    if (distanceFromChicago > 50000) {
+      setMapNotice('You are far from Chicago. Map centered on landmarks for preview.');
     } else {
       setMapNotice(null);
     }
@@ -223,7 +235,7 @@ export default function Page() {
       if (distance <= 50) {
         unlockingRef.current.add(landmark.id);
         try {
-          await unlockLandmark(user.uid, landmark.id);
+          await unlockLandmark(user.id, landmark.id);
         } catch (error) {
           console.warn('[unlock] Firestore unavailable, stored locally.', error);
         }
@@ -240,8 +252,20 @@ export default function Page() {
     setAssetLoading(true);
     console.info('[cinematic] fetch asset', { landmarkId: activeLandmark.id, personaId: profile.personaId });
     fetchCinematicAsset(activeLandmark.id, profile.personaId)
-      .then((data) => {
-        if (mounted) setAsset(data);
+      .then(async (data) => {
+        if (!mounted) return;
+        if (data) {
+          setAsset(data);
+        } else {
+          // Trigger on-the-fly generation if missing (for demo purposes)
+          console.info('[cinematic] asset missing, generating story...', activeLandmark.id);
+          const script = await generateStoryScript(activeLandmark.id, profile.personaId);
+          if (script && mounted) {
+            // Re-fetch now that it's generated
+            const newData = await fetchCinematicAsset(activeLandmark.id, profile.personaId);
+            if (mounted) setAsset(newData);
+          }
+        }
       })
       .finally(() => {
         if (mounted) setAssetLoading(false);
@@ -254,17 +278,17 @@ export default function Page() {
   const handleOnboardingComplete = async (newProfile: UserProfile) => {
     if (!user) return;
     try {
-      await saveUserProfile(user.uid, newProfile);
-      console.info('[onboarding] profile saved', { uid: user.uid, personaId: newProfile.personaId });
+      await saveUserProfile(user.id, newProfile);
+      console.info('[onboarding] profile saved', { uid: user.id, personaId: newProfile.personaId });
     } catch (error) {
       console.warn('[onboarding] Firestore unavailable, using local profile.', error);
       setMapError('Firestore unavailable. Using local profile until connection resumes.');
     }
     writeLocal(LOCAL_PROFILE_KEY, newProfile);
     setProfile(newProfile);
-    console.info('[onboarding] profile saved', { uid: user.uid, personaId: newProfile.personaId });
+    console.info('[onboarding] profile saved', { uid: user.id, personaId: newProfile.personaId });
     prefetchPersonaAssets({
-      uid: user.uid,
+      uid: user.id,
       personaId: newProfile.personaId,
       personaTitle: newProfile.personaTitle
     });
@@ -272,7 +296,7 @@ export default function Page() {
 
   const handleProfileUpdate = async (updated: UserProfile) => {
     if (!user) return;
-    await saveUserProfile(user.uid, updated);
+    await saveUserProfile(user.id, updated);
     setProfile(updated);
   };
 
@@ -288,7 +312,7 @@ export default function Page() {
       script: asset?.script || null
     };
     try {
-      await saveGalleryItem(user.uid, item);
+      await saveGalleryItem(user.id, item);
     } catch (error) {
       console.warn('[gallery] Firestore unavailable, stored locally.', error);
     }
@@ -328,14 +352,13 @@ export default function Page() {
   };
 
   const distanceFromChicago = userLocation
-    ? getDistanceMeters(userLocation.lat, userLocation.lng, CHICAGO_CENTER.lat, CHICAGO_CENTER.lng)
+    ? getDistanceMeters(userLocation.lat, userLocation.lng, DEFAULT_CENTER.lat, DEFAULT_CENTER.lng)
     : null;
   const centerOverride =
-    manualCenter || (distanceFromChicago && distanceFromChicago > 20000 ? CHICAGO_CENTER : null);
+    manualCenter || (distanceFromChicago && distanceFromChicago > 20000 ? DEFAULT_CENTER : null);
 
   const handleSignOut = async () => {
-    if (!auth) return;
-    await signOut(auth);
+    await supabase.auth.signOut();
     setProfile(null);
     setLandmarks([]);
     setUnlockedIds([]);
@@ -360,19 +383,6 @@ export default function Page() {
     }
   };
 
-  if (!firebaseReady) {
-    return (
-      <div className="min-h-screen bg-ink text-white flex items-center justify-center p-8">
-        <div className="max-w-lg space-y-4 text-center">
-          <h1 className="text-2xl font-semibold">Firebase config missing</h1>
-          <p className="text-zinc-400">
-            Set the NEXT_PUBLIC_FIREBASE_* environment variables to enable auth, data, and storage.
-          </p>
-        </div>
-      </div>
-    );
-  }
-
   if (!authChecked) {
     return (
       <div className="min-h-screen bg-ink text-white flex items-center justify-center">
@@ -394,14 +404,14 @@ export default function Page() {
   }
 
   if (!profile || !profile.hasOnboarded) {
-    return <Onboarding onComplete={handleOnboardingComplete} uid={user.uid} displayName={user.displayName} />;
+    return <Onboarding onComplete={handleOnboardingComplete} uid={user.id} displayName={user.email} />;
   }
 
   return (
     <div className="h-screen w-screen flex flex-col bg-ink text-white overflow-hidden">
       <header className="p-4 bg-zinc-900/90 backdrop-blur-md border-b border-zinc-800 flex justify-between items-center z-20 shadow-lg shrink-0">
         <div>
-          <h1 className="text-xl font-bold text-gold">Windy City Whispers</h1>
+          <h1 className="text-xl font-bold text-gold">Aura</h1>
           <p className="text-xs text-zinc-400">{profile.personaTitle || 'Explorer'}</p>
         </div>
         <div className="flex items-center gap-3">
@@ -457,10 +467,10 @@ export default function Page() {
 
         <div className="absolute right-4 bottom-20 z-10">
           <button
-            onClick={() => setManualCenter(CHICAGO_CENTER)}
+            onClick={() => setManualCenter(DEFAULT_CENTER)}
             className="px-4 py-2 rounded-full bg-zinc-900/90 border border-zinc-700 text-xs uppercase tracking-wider text-zinc-100 hover:text-white hover:border-gold transition shadow-lg"
           >
-            Center on Chicago
+            Center on Map
           </button>
         </div>
 

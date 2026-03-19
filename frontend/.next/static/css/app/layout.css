@@ -1,5 +1,5 @@
 /*!***************************************************************************************************************************************************************************************************************************************************************!*\
-  !*** css ../node_modules/next/dist/build/webpack/loaders/css-loader/src/index.js??ruleSet[1].rules[13].oneOf[10].use[2]!../node_modules/next/dist/build/webpack/loaders/postcss-loader/src/index.js??ruleSet[1].rules[13].oneOf[10].use[3]!./app/globals.css ***!
+  !*** css ../node_modules/next/dist/build/webpack/loaders/css-loader/src/index.js??ruleSet[1].rules[14].oneOf[10].use[2]!../node_modules/next/dist/build/webpack/loaders/postcss-loader/src/index.js??ruleSet[1].rules[14].oneOf[10].use[3]!./app/globals.css ***!
   \***************************************************************************************************************************************************************************************************************************************************************/
 /*
 ! tailwindcss v3.4.10 | MIT License | https://tailwindcss.com
@@ -679,11 +679,11 @@ video {
 .w-screen {
   width: 100vw;
 }
+.min-w-\[100px\] {
+  min-width: 100px;
+}
 .max-w-2xl {
   max-width: 42rem;
-}
-.max-w-lg {
-  max-width: 32rem;
 }
 .max-w-md {
   max-width: 28rem;
@@ -844,6 +844,10 @@ video {
 .border-t-transparent {
   border-top-color: transparent;
 }
+.bg-\[\#0e0e10\] {
+  --tw-bg-opacity: 1;
+  background-color: rgb(14 14 16 / var(--tw-bg-opacity));
+}
 .bg-black\/40 {
   background-color: rgb(0 0 0 / 0.4);
 }
@@ -939,6 +943,9 @@ video {
   -o-object-fit: cover;
      object-fit: cover;
 }
+.p-1 {
+  padding: 0.25rem;
+}
 .p-2 {
   padding: 0.5rem;
 }
@@ -950,9 +957,6 @@ video {
 }
 .p-6 {
   padding: 1.5rem;
-}
-.p-8 {
-  padding: 2rem;
 }
 .px-2 {
   padding-left: 0.5rem;
@@ -1020,6 +1024,10 @@ video {
   font-size: 2.25rem;
   line-height: 2.5rem;
 }
+.text-5xl {
+  font-size: 3rem;
+  line-height: 1;
+}
 .text-\[10px\] {
   font-size: 10px;
 }
@@ -1038,6 +1046,9 @@ video {
 .text-xs {
   font-size: 0.75rem;
   line-height: 1rem;
+}
+.font-black {
+  font-weight: 900;
 }
 .font-bold {
   font-weight: 700;
@@ -1062,6 +1073,12 @@ video {
 }
 .leading-tight {
   line-height: 1.25;
+}
+.tracking-tight {
+  letter-spacing: -0.025em;
+}
+.tracking-tighter {
+  letter-spacing: -0.05em;
 }
 .tracking-wider {
   letter-spacing: 0.05em;
