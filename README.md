@@ -1,4 +1,4 @@
-# Aura
+# Aura - PR TEST
 
 **Aura** is a mobile-first, gamified city exploration app that unlocks cinematic, personalized micro-stories at important city landmarks. Think Pokemon Go meets a personalized tour guide. It replaces generic tours with AI-generated storytelling that adapts local history to a user's unique interests and assigned persona.
 
