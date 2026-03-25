@@ -30,10 +30,11 @@ export const CinematicModal: React.FC<LandmarkModalProps> = ({
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
   useEffect(() => {
-    if (!audioRef.current) return;
+    const audioElement = audioRef.current;
+    if (!audioElement) return;
     const handleEnded = () => setIsPlaying(false);
-    audioRef.current.addEventListener('ended', handleEnded);
-    return () => audioRef.current?.removeEventListener('ended', handleEnded);
+    audioElement.addEventListener('ended', handleEnded);
+    return () => audioElement.removeEventListener('ended', handleEnded);
   }, []);
 
   const handlePlayAudio = () => {
@@ -168,7 +169,7 @@ export const CinematicModal: React.FC<LandmarkModalProps> = ({
               </div>
             ) : (
               <p className="text-zinc-300 leading-relaxed font-light text-sm italic border-l-2 border-yellow-500 pl-4">
-                "{asset?.script || 'The city holds many stories, but this one is still forming.'}"
+                &ldquo;{asset?.script || 'The city holds many stories, but this one is still forming.'}&rdquo;
               </p>
             )}
           </div>

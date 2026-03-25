@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import dynamic from 'next/dynamic';
 import { supabase } from '../lib/supabase';
 import type { User } from '@supabase/supabase-js';
@@ -402,7 +402,7 @@ export default function Page() {
     setItineraryIds(prev => prev.filter(item => item !== id));
   };
 
-  const calculateBestRoute = () => {
+  const calculateBestRoute = useCallback(() => {
     if (itineraryIds.length === 0 || !userLocation) {
       setItineraryRoute(null);
       return;
@@ -434,11 +434,11 @@ export default function Page() {
     }
     
     setItineraryRoute(route);
-  };
+  }, [itineraryIds, userLocation, landmarks]);
 
   useEffect(() => {
     calculateBestRoute();
-  }, [itineraryIds, userLocation]);
+  }, [calculateBestRoute]);
 
   const distanceFromChicago = userLocation
     ? getDistanceMeters(userLocation.lat, userLocation.lng, DEFAULT_CENTER.lat, DEFAULT_CENTER.lng)

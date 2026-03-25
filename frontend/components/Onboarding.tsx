@@ -60,13 +60,13 @@ export const Onboarding: React.FC<OnboardingProps> = ({ onComplete, uid, display
             <div className="space-y-4">
             <h1 className="text-4xl font-bold tracking-tight text-white">Welcome to Aura</h1>
             <p className="text-lg text-zinc-400">
-              Your personalized journey through the world's most iconic cities begins here.
+              Your personalized journey through the world&apos;s most iconic cities begins here.
             </p>
           </div>
             
             <div className="space-y-1">
               <h2 className="text-xl font-semibold">What interests you?</h2>
-              <p className="text-sm text-zinc-400">We'll customize your journey based on this.</p>
+              <p className="text-sm text-zinc-400">We&apos;ll customize your journey based on this.</p>
             </div>
             
             <div className="grid grid-cols-2 gap-3">

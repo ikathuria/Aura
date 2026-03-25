@@ -77,8 +77,6 @@ export const MapView: React.FC<MapViewProps> = ({
   onEventClick,
   showMapError
 }) => {
-  if (typeof window === 'undefined') return null;
-
   const center: [number, number] = centerOverride 
     ? [centerOverride.lat, centerOverride.lng]
     : userLocation 

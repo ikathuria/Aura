@@ -29,8 +29,8 @@ export async function fetchUserProfile(uid: string): Promise<UserProfile | null>
 }
 
 export async function saveUserProfile(uid: string, profile: UserProfile): Promise<void> {
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const { uid: _, ...rest } = profile;
+  const { uid: profileUid, ...rest } = profile;
+  void profileUid;
   const { error } = await supabase
     .from('users')
     .upsert({ id: uid, ...rest });

@@ -119,7 +119,7 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
                       </div>
                     ) : null}
                     <div className="p-3">
-                      <p className="text-xs text-zinc-400 line-clamp-2 italic">"{entry.script || 'A memory waiting to be written.'}"</p>
+                      <p className="text-xs text-zinc-400 line-clamp-2 italic">&ldquo;{entry.script || 'A memory waiting to be written.'}&rdquo;</p>
                     </div>
                   </div>
                 ))

@@ -30,15 +30,23 @@ Create a living, personalized map of landmarks where each landmark becomes a sho
 - [Hugging Face Token](https://huggingface.co/settings/tokens) (Free).
 
 ### 2) Supabase Setup
-Initialize your database by running the schema in the Supabase SQL Editor:
-```sql
--- See supabase_schema.sql in the artifacts for the full script.
+Use migration files for reproducible schema changes:
+```bash
+npx supabase db push
 ```
 
-Set your Hugging Face Token in Supabase Secrets:
+Core schema + RLS baseline migration:
+- `supabase/migrations/20260325130000_core_schema_and_rls.sql`
+
+RLS audit query (run in SQL editor when validating staging/prod):
+- `supabase/audits/rls_audit.sql`
+
+Set required Supabase secrets:
 ```bash
 npx supabase secrets set HUGGING_FACE_TOKEN=your_token_here
+npx supabase secrets set APP_ENV=staging
 ```
+For production, set `APP_ENV=production` in the production Supabase project.
 
 Deploy the Edge Functions:
 ```bash
@@ -46,6 +54,11 @@ npx supabase functions deploy assign-persona
 npx supabase functions deploy prefetch-persona-assets
 npx supabase functions deploy generate-story-script
 npx supabase functions deploy reset-assets
+```
+
+Run function auth safety check before deploy:
+```bash
+npm run check:function-auth
 ```
 
 ### 3) Frontend Setup
@@ -65,6 +78,30 @@ NEXT_PUBLIC_APP_ENV=staging
 npm install
 npm run dev
 ```
+
+## CI/CD Workflows
+
+- `PR Validation` (`.github/workflows/pr-validation.yml`)
+  - Triggers on pull requests to `main` and `staging`.
+  - Runs lint, typecheck, function-auth checks, and production build.
+- `Staging Deploy` (`.github/workflows/staging-deploy.yml`)
+  - Triggers on push to `staging` and optional manual dispatch.
+  - Runs validation first, then deploys migrations, edge functions, and frontend.
+- `Production Release` (`.github/workflows/production-release.yml`)
+  - Manual `workflow_dispatch` only with ref input.
+  - Runs validation first, then deploys migrations, edge functions, and frontend.
+
+Required GitHub repository secrets:
+
+- `SUPABASE_ACCESS_TOKEN`
+- `SUPABASE_PROJECT_REF_STAGING`
+- `SUPABASE_DB_PASSWORD_STAGING`
+- `SUPABASE_PROJECT_REF_PRODUCTION`
+- `SUPABASE_DB_PASSWORD_PRODUCTION`
+- `VERCEL_TOKEN`
+- `VERCEL_ORG_ID`
+- `VERCEL_PROJECT_ID_STAGING`
+- `VERCEL_PROJECT_ID_PRODUCTION`
 
 ## AI Story Pipeline
 1. When a landmark is clicked, the app checks if a personalized story exists in `landmark_assets`.
