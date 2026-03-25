@@ -6,7 +6,7 @@ import type { UserProfile } from '../types';
 import { assignPersona } from '../lib/personaService';
 
 interface OnboardingProps {
-  onComplete: (profile: UserProfile) => void;
+  onComplete: (profile: UserProfile) => void | Promise<void>;
   uid: string;
   displayName?: string | null;
 }
@@ -14,6 +14,7 @@ interface OnboardingProps {
 export const Onboarding: React.FC<OnboardingProps> = ({ onComplete, uid, displayName }) => {
   const [selectedInterests, setSelectedInterests] = useState<InterestId[]>([]);
   const [step, setStep] = useState<'interests' | 'processing'>('interests');
+  const [error, setError] = useState<string | null>(null);
 
   const toggleInterest = (id: InterestId) => {
     setSelectedInterests(prev => 
@@ -23,17 +24,23 @@ export const Onboarding: React.FC<OnboardingProps> = ({ onComplete, uid, display
 
   const handleFinish = async () => {
     setStep('processing');
-    const persona = await assignPersona(selectedInterests);
-    
-    onComplete({
-      uid,
-      name: displayName || 'Explorer',
-      interests: selectedInterests,
-      personaId: persona.personaId,
-      personaTitle: persona.personaTitle,
-      hasOnboarded: true,
-      createdAt: Date.now()
-    });
+    setError(null);
+    try {
+      const persona = await assignPersona(selectedInterests);
+      await onComplete({
+        uid,
+        name: displayName || 'Explorer',
+        interests: selectedInterests,
+        personaId: persona.personaId,
+        personaTitle: persona.personaTitle,
+        hasOnboarded: true,
+        createdAt: Date.now()
+      });
+    } catch (error) {
+      console.warn('[onboarding] failed to complete', error);
+      setError('Could not finish onboarding. Please try again.');
+      setStep('interests');
+    }
   };
 
   return (
@@ -87,6 +94,10 @@ export const Onboarding: React.FC<OnboardingProps> = ({ onComplete, uid, display
               Start Exploring
             </button>
           </div>
+        )}
+
+        {error && (
+          <p className="text-sm text-red-400 text-center">{error}</p>
         )}
 
         {step === 'processing' && (

@@ -1,9 +1,5 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-}
+import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
+import { corsHeaders, jsonResponse, requireUser } from '../_shared/http.ts';
 
 const personaMap = new Map([
   ['tech', { personaId: 'techie', personaTitle: 'The Techie' }],
@@ -15,27 +11,25 @@ const personaMap = new Map([
 ]);
 
 serve(async (req) => {
-  // Add CORS preflight support
   if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: corsHeaders })
+    return new Response('ok', { headers: corsHeaders });
+  }
+
+  const auth = await requireUser(req);
+  if (auth.error) {
+    return auth.error;
   }
 
   try {
-    const { interests } = await req.json()
-    const priority = ['tech', 'art', 'history', 'architecture', 'food', 'sports']
-    const matched = priority.find((interest) => interests.includes(interest))
-    const fallback = { personaId: 'historian', personaTitle: 'The Historian' }
-    
-    const result = personaMap.get(matched || '') || fallback
+    const body = await req.json();
+    const interests = Array.isArray(body?.interests) ? body.interests : [];
+    const priority = ['tech', 'art', 'history', 'architecture', 'food', 'sports'];
+    const matched = priority.find((interest) => interests.includes(interest));
+    const fallback = { personaId: 'historian', personaTitle: 'The Historian' };
+    const result = personaMap.get(matched || '') || fallback;
 
-    return new Response(JSON.stringify(result), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      status: 200,
-    })
+    return jsonResponse(result, 200);
   } catch (error: any) {
-    return new Response(JSON.stringify({ error: error.message }), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      status: 400,
-    })
+    return jsonResponse({ error: error.message }, 400);
   }
-})
+});

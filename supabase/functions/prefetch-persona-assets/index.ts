@@ -1,46 +1,45 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-}
+import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
+import { corsHeaders, jsonResponse, requireUser } from '../_shared/http.ts';
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: corsHeaders })
+    return new Response('ok', { headers: corsHeaders });
+  }
+
+  const auth = await requireUser(req);
+  if (auth.error) {
+    return auth.error;
   }
 
   try {
-    const supabaseClient = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-    )
+    const { user, supabaseClient } = auth;
+    const body = await req.json();
+    const requestedUid = body?.uid;
+    const personaId = typeof body?.personaId === 'string' ? body.personaId : '';
+    if (requestedUid && requestedUid !== user.id) {
+      return jsonResponse({ error: 'Forbidden: caller UID mismatch.' }, 403);
+    }
+    if (!personaId) {
+      return jsonResponse({ error: 'personaId is required.' }, 400);
+    }
 
-    const { uid, personaId, personaTitle } = await req.json()
-    
-    const now = Date.now()
-    
+    const now = Date.now();
     const { error: statusError } = await supabaseClient
       .from('asset_status')
       .upsert({
-        user_id: uid,
+        user_id: user.id,
         landmarkId: 'cloud-gate',
-        personaId: personaId,
+        personaId,
         status: 'queued',
         updatedAt: now
-      })
+      }, {
+        onConflict: 'user_id,landmarkId'
+      });
 
-    if (statusError) throw statusError
+    if (statusError) throw statusError;
 
-    return new Response(JSON.stringify({ success: true, queued: 1 }), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      status: 200,
-    })
+    return jsonResponse({ success: true, queued: 1 }, 200);
   } catch (error: any) {
-    return new Response(JSON.stringify({ error: error.message }), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      status: 400,
-    })
+    return jsonResponse({ error: error.message }, 400);
   }
-})
+});

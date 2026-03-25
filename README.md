@@ -42,8 +42,10 @@ npx supabase secrets set HUGGING_FACE_TOKEN=your_token_here
 
 Deploy the Edge Functions:
 ```bash
-npx supabase functions deploy prefetch-persona-assets --no-verify-jwt
-npx supabase functions deploy generate-story-script --no-verify-jwt
+npx supabase functions deploy assign-persona
+npx supabase functions deploy prefetch-persona-assets
+npx supabase functions deploy generate-story-script
+npx supabase functions deploy reset-assets
 ```
 
 ### 3) Frontend Setup
@@ -51,7 +53,10 @@ Create `frontend/.env.local`:
 ```env
 NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
-NEXT_PUBLIC_TEST_UNLOCK_IDS=cloud-gate,navy-pier
+NEXT_PUBLIC_APP_ENV=staging
+# Optional (staging/dev only)
+# NEXT_PUBLIC_TEST_UNLOCK_IDS=cloud-gate,navy-pier
+# NEXT_PUBLIC_TEST_UNLOCK_COUNT=1
 ```
 
 ### 4) Run the App

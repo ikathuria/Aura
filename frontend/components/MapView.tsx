@@ -1,10 +1,10 @@
 'use client';
 
 import React, { useMemo } from 'react';
-import { MapContainer, TileLayer, Marker, Circle, Popup, useMap } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Circle, Popup, Polyline, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
-import type { AssetStatus, Landmark } from '../types';
+import type { AssetStatus, Landmark, LocalEvent, AppMode } from '../types';
 
 // Fix for default marker icons in Leaflet with Next.js
 if (typeof window !== 'undefined') {
@@ -17,12 +17,16 @@ if (typeof window !== 'undefined') {
 }
 
 interface MapViewProps {
+  mode: AppMode;
   landmarks: Landmark[];
+  events: LocalEvent[];
   unlockedIds: string[];
   userLocation: { lat: number; lng: number } | null;
   centerOverride?: { lat: number; lng: number } | null;
   assetStatuses: Record<string, AssetStatus>;
+  itineraryRoute: [number, number][] | null;
   onLandmarkClick: (landmark: Landmark, isUnlocked: boolean) => void;
+  onEventClick: (event: LocalEvent) => void;
   showMapError: (message: string | null) => void;
 }
 
@@ -61,12 +65,16 @@ const createCustomIcon = (color: string, scale: number, opacity: number = 1, str
 };
 
 export const MapView: React.FC<MapViewProps> = ({
+  mode,
   landmarks,
+  events,
   unlockedIds,
   userLocation,
   centerOverride,
   assetStatuses,
+  itineraryRoute,
   onLandmarkClick,
+  onEventClick,
   showMapError
 }) => {
   if (typeof window === 'undefined') return null;
@@ -83,6 +91,7 @@ export const MapView: React.FC<MapViewProps> = ({
   const readyIcon = useMemo(() => createCustomIcon('#d4af37', 12), []);
   const failedIcon = useMemo(() => createCustomIcon('#ef4444', 9), []);
   const lockedIcon = useMemo(() => createCustomIcon('#1f1f23', 8, 1, '#444444'), []);
+  const eventIcon = useMemo(() => createCustomIcon('#a855f7', 10, 1, '#ffffff'), []);
 
   const mapKey = useMemo(() => `aura-map-${Math.random().toString(36).substr(2, 9)}`, []);
 
@@ -120,7 +129,20 @@ export const MapView: React.FC<MapViewProps> = ({
           </>
         )}
 
-        {landmarks.map((landmark) => {
+        {itineraryRoute && itineraryRoute.length > 1 && (
+          <Polyline
+            positions={itineraryRoute}
+            pathOptions={{
+              color: '#d4af37',
+              weight: 4,
+              opacity: 0.6,
+              dashArray: '10, 10',
+              lineCap: 'round'
+            }}
+          />
+        )}
+
+        {mode === 'tourist' && landmarks.map((landmark) => {
           const isUnlocked = unlockedIds.includes(landmark.id);
           const status = assetStatuses[landmark.id]?.status;
           const icon =
@@ -181,6 +203,28 @@ export const MapView: React.FC<MapViewProps> = ({
                 </Popup>
               </Marker>
             </React.Fragment>
+          );
+        })}
+
+        {mode === 'local' && events.map((event) => {
+          return (
+            <Marker
+              key={event.id}
+              position={[event.lat, event.lng]}
+              icon={eventIcon}
+              eventHandlers={{
+                click: () => onEventClick(event)
+              }}
+            >
+              <Popup>
+                <div className="space-y-0.5 p-1 min-w-[100px]">
+                  <div className="text-xs font-semibold text-zinc-900">{event.name}</div>
+                  <div className="text-[10px] text-zinc-700">
+                    {new Date(event.startTime).toLocaleDateString()} - {event.type}
+                  </div>
+                </div>
+              </Popup>
+            </Marker>
           );
         })}
       </MapContainer>

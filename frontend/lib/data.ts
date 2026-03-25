@@ -1,5 +1,6 @@
 import { supabase } from './supabase';
 import { SEED_LANDMARKS } from './seedLandmarks';
+import { allowResetAssets } from './env';
 import type { AssetStatus, CinematicAsset, GalleryItem, Landmark, Unlock, UserProfile } from '../types';
 
 export async function fetchLandmarks(): Promise<Landmark[]> {
@@ -56,14 +57,18 @@ export async function fetchUnlocks(uid: string): Promise<Unlock[]> {
 export async function unlockLandmark(uid: string, landmarkId: string): Promise<void> {
   const { error } = await supabase
     .from('unlocks')
-    .insert({
+    .upsert({
       user_id: uid,
       landmarkId: landmarkId,
       unlockedAt: new Date().toISOString()
+    }, {
+      onConflict: 'user_id,landmarkId',
+      ignoreDuplicates: true
     });
   
   if (error) {
     console.warn('Error unlocking landmark in Supabase:', error);
+    throw error;
   }
 }
 
@@ -101,6 +106,7 @@ export async function saveGalleryItem(uid: string, item: GalleryItem): Promise<v
   
   if (error) {
     console.error('Error saving gallery item to Supabase:', error);
+    throw error;
   }
 }
 
@@ -144,10 +150,17 @@ export async function fetchAssetStatuses(uid: string): Promise<Record<string, As
 }
 
 export async function resetAssets(): Promise<{ success: boolean }> {
+  if (!allowResetAssets) {
+    throw new Error('Asset reset is disabled in production.');
+  }
   const { data, error } = await supabase.functions.invoke('reset-assets');
   if (error) {
     console.error('Error invoking reset-assets:', error);
-    return { success: false };
+    throw error;
   }
-  return data as { success: boolean };
+  const result = data as { success?: boolean } | null;
+  if (!result?.success) {
+    throw new Error('reset-assets returned an unsuccessful response.');
+  }
+  return { success: true };
 }

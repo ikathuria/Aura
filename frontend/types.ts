@@ -9,6 +9,25 @@ export type LandmarkType =
   | 'food'
   | 'sports';
 
+export type AppMode = 'tourist' | 'local';
+
+export interface LocalEvent {
+  id: string;
+  name: string;
+  lat: number;
+  lng: number;
+  description: string;
+  type: 'festival' | 'market' | 'concert' | 'sports' | 'other';
+  startTime: string;
+}
+
+export interface Itinerary {
+  id: string;
+  landmarkIds: string[];
+  optimizedOrder: string[];
+  createdAt: number;
+}
+
 export interface Landmark {
   id: string;
   name: string;

@@ -8,6 +8,7 @@ export const AuthGate: React.FC = () => {
   const [password, setPassword] = useState('');
   const [mode, setMode] = useState<'signin' | 'signup'>('signin');
   const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
   const handleGoogle = async () => {
@@ -29,15 +30,29 @@ export const AuthGate: React.FC = () => {
   };
 
   const handleEmail = async () => {
+    const normalizedEmail = email.trim().toLowerCase();
+    if (!normalizedEmail) {
+      setError('Email is required.');
+      return;
+    }
+    if (password.length < 6) {
+      setError('Password must be at least 6 characters.');
+      return;
+    }
+
     setBusy(true);
     setError(null);
+    setNotice(null);
     try {
       if (mode === 'signin') {
-        const { error } = await supabase.auth.signInWithPassword({ email, password });
+        const { error } = await supabase.auth.signInWithPassword({ email: normalizedEmail, password });
         if (error) throw error;
       } else {
-        const { error } = await supabase.auth.signUp({ email, password });
+        const { data, error } = await supabase.auth.signUp({ email: normalizedEmail, password });
         if (error) throw error;
+        if (!data.session) {
+          setNotice('Account created. Check your email to verify before signing in.');
+        }
       }
     } catch (err: any) {
       setError(err.message || 'Email sign-in/up failed.');
@@ -105,6 +120,7 @@ export const AuthGate: React.FC = () => {
         </div>
 
         {error && <p className="text-sm text-red-400">{error}</p>}
+        {notice && <p className="text-sm text-emerald-400">{notice}</p>}
       </div>
     </div>
   );

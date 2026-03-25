@@ -24,7 +24,10 @@ export async function generateStoryScript(landmarkId: string, personaId: string)
     });
     
     if (error) throw error;
-    return data.script;
+    if (data && typeof data.script === 'string' && data.script.trim()) {
+      return data.script;
+    }
+    return null;
   } catch (error) {
     console.warn('[generateStoryScript] failed', error);
     return null;

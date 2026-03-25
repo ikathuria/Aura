@@ -10,6 +10,9 @@ interface LandmarkModalProps {
   onClose: () => void;
   onSaveToGallery: () => void;
   isSaved: boolean;
+  onAddToItinerary: (id: string) => void;
+  onRemoveFromItinerary: (id: string) => void;
+  isInItinerary: boolean;
 }
 
 export const CinematicModal: React.FC<LandmarkModalProps> = ({
@@ -18,7 +21,10 @@ export const CinematicModal: React.FC<LandmarkModalProps> = ({
   loading,
   onClose,
   onSaveToGallery,
-  isSaved
+  isSaved,
+  onAddToItinerary,
+  onRemoveFromItinerary,
+  isInItinerary
 }) => {
   const [isPlaying, setIsPlaying] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -139,6 +145,16 @@ export const CinematicModal: React.FC<LandmarkModalProps> = ({
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
               </svg>
               <span className="text-xs font-bold uppercase tracking-wider">Directions</span>
+            </button>
+
+            <button 
+              onClick={() => isInItinerary ? onRemoveFromItinerary(landmark.id) : onAddToItinerary(landmark.id)}
+              className={`flex items-center gap-2 transition ${isInItinerary ? 'text-gold' : 'text-zinc-400 hover:text-white'}`}
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v3m0 0v3m0-3h3m-3 0H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <span className="text-xs font-bold uppercase tracking-wider">{isInItinerary ? 'Scheduled' : 'Plan Trip'}</span>
             </button>
           </div>
 
