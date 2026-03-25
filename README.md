@@ -1,4 +1,4 @@
-# Aura
+# Aura - PR TEST
 
 **Aura** is a mobile-first, gamified city exploration app that unlocks cinematic, personalized micro-stories at important city landmarks. Think Pokemon Go meets a personalized tour guide. It replaces generic tours with AI-generated storytelling that adapts local history to a user's unique interests and assigned persona.
 
@@ -98,6 +98,10 @@ Required GitHub repository secrets:
 - `SUPABASE_DB_PASSWORD_STAGING`
 - `SUPABASE_PROJECT_REF_PRODUCTION`
 - `SUPABASE_DB_PASSWORD_PRODUCTION`
+- `NEXT_PUBLIC_SUPABASE_URL_STAGING`
+- `NEXT_PUBLIC_SUPABASE_ANON_KEY_STAGING`
+- `NEXT_PUBLIC_SUPABASE_URL_PRODUCTION`
+- `NEXT_PUBLIC_SUPABASE_ANON_KEY_PRODUCTION`
 - `VERCEL_TOKEN`
 - `VERCEL_ORG_ID`
 - `VERCEL_PROJECT_ID_STAGING`
