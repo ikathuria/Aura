@@ -2,6 +2,7 @@
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import dynamic from 'next/dynamic';
+import Link from 'next/link';
 import { supabase } from '../lib/supabase';
 import type { User } from '@supabase/supabase-js';
 import { AuthGate } from '../components/AuthGate';
@@ -19,6 +20,7 @@ import {
   fetchCinematicAsset,
   fetchGallery,
   fetchLandmarks,
+  fetchLocalEvents,
   fetchUnlocks,
   fetchUserProfile,
   saveGalleryItem,
@@ -69,7 +71,7 @@ export default function Page() {
   const [assetStatuses, setAssetStatuses] = useState<Record<string, AssetStatus>>({});
   const [showProfile, setShowProfile] = useState(false);
   const [mode, setMode] = useState<AppMode>('tourist');
-  const [events] = useState<LocalEvent[]>(SEED_EVENTS);
+  const [events, setEvents] = useState<LocalEvent[]>(SEED_EVENTS);
   const [activeEvent, setActiveEvent] = useState<LocalEvent | null>(null);
   const [itineraryIds, setItineraryIds] = useState<string[]>([]);
   const [itineraryRoute, setItineraryRoute] = useState<[number, number][] | null>(null);
@@ -109,21 +111,24 @@ export default function Page() {
     setProfileLoading(true);
     const load = async () => {
       try {
-        const [profileData, landmarkData, unlockData, galleryData, statusData] = await Promise.all([
+        const [profileData, landmarkData, eventData, unlockData, galleryData, statusData] = await Promise.all([
           fetchUserProfile(user.id),
           fetchLandmarks(),
+          fetchLocalEvents(),
           fetchUnlocks(user.id),
           fetchGallery(user.id),
           fetchAssetStatuses(user.id)
         ]);
         if (profileData) setProfile(profileData);
         setLandmarks(landmarkData);
+        setEvents(eventData);
         setUnlockedIds(unlockData.map((u) => u.landmarkId));
         setGallery(galleryData);
         setAssetStatuses(statusData);
       } catch (error) {
         console.warn('[load] Supabase unavailable, using local fallback.', error);
         setLandmarks(SEED_LANDMARKS);
+        setEvents(SEED_EVENTS);
         setMapError('Supabase unavailable. Showing cached landmarks only.');
         const localProfile = readLocal<UserProfile>(LOCAL_PROFILE_KEY);
         const localUnlocks = readLocal<string[]>(LOCAL_UNLOCKS_KEY);
@@ -454,6 +459,7 @@ export default function Page() {
     }
     setProfile(null);
     setLandmarks([]);
+    setEvents(SEED_EVENTS);
     setUnlockedIds([]);
     setGallery([]);
   };
@@ -523,6 +529,14 @@ export default function Page() {
           >
             Profile
           </button>
+          {profile.isAdmin && (
+            <Link
+              href="/admin"
+              className="px-3 py-2 rounded-lg bg-zinc-800 border border-zinc-700 text-xs uppercase tracking-wider text-gold"
+            >
+              Admin
+            </Link>
+          )}
           <button
             onClick={handleSignOut}
             className="px-3 py-2 rounded-lg border border-zinc-800 text-xs text-zinc-400 hover:text-white"

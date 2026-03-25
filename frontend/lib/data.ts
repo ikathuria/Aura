@@ -1,10 +1,15 @@
 import { supabase } from './supabase';
 import { SEED_LANDMARKS } from './seedLandmarks';
+import { SEED_EVENTS } from './seedEvents';
 import { allowResetAssets } from './env';
-import type { AssetStatus, CinematicAsset, GalleryItem, Landmark, Unlock, UserProfile } from '../types';
+import type { AssetStatus, CinematicAsset, GalleryItem, Landmark, LocalEvent, Unlock, UserProfile } from '../types';
 
 export async function fetchLandmarks(): Promise<Landmark[]> {
-  const { data, error } = await supabase.from('landmarks').select('*');
+  const { data, error } = await supabase
+    .from('landmarks')
+    .select('*')
+    .eq('isDeleted', false)
+    .order('name', { ascending: true });
   if (error || !data || data.length === 0) return SEED_LANDMARKS;
   return data.map((item: any) => ({
     id: item.id,
@@ -12,7 +17,33 @@ export async function fetchLandmarks(): Promise<Landmark[]> {
     lat: item.lat,
     lng: item.lng,
     description: item.description || '',
-    type: item.type || 'historic'
+    type: item.type || 'historic',
+    isPublished: item.isPublished ?? true,
+    isDeleted: item.isDeleted ?? false,
+    updatedAt: item.updatedAt || null
+  }));
+}
+
+export async function fetchLocalEvents(): Promise<LocalEvent[]> {
+  const { data, error } = await supabase
+    .from('events')
+    .select('*')
+    .eq('isDeleted', false)
+    .order('startTime', { ascending: true });
+
+  if (error || !data || data.length === 0) return SEED_EVENTS;
+  return data.map((item: any) => ({
+    id: item.id,
+    name: item.name,
+    lat: item.lat,
+    lng: item.lng,
+    description: item.description || '',
+    type: item.type || 'other',
+    startTime: item.startTime,
+    isPublished: item.isPublished ?? false,
+    isDeleted: item.isDeleted ?? false,
+    createdAt: item.createdAt || null,
+    updatedAt: item.updatedAt || null
   }));
 }
 
@@ -24,8 +55,16 @@ export async function fetchUserProfile(uid: string): Promise<UserProfile | null>
     .single();
   
   if (error || !data) return null;
-  // Supabase returns the columns as keys. Since we used camelCase in DB, these match UserProfile.
-  return data as UserProfile;
+  return {
+    uid,
+    name: data.name || 'Explorer',
+    interests: data.interests || [],
+    personaId: data.personaId || 'historian',
+    personaTitle: data.personaTitle || 'The Historian',
+    hasOnboarded: data.hasOnboarded ?? false,
+    createdAt: data.createdAt || Date.now(),
+    isAdmin: data.isAdmin ?? false
+  };
 }
 
 export async function saveUserProfile(uid: string, profile: UserProfile): Promise<void> {

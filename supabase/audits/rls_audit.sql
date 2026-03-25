@@ -6,10 +6,12 @@ with target_tables as (
   select unnest(array[
     'users',
     'landmarks',
+    'events',
     'unlocks',
     'gallery',
     'landmark_assets',
-    'asset_status'
+    'asset_status',
+    'admin_action_logs'
   ]) as table_name
 ),
 policy_counts as (

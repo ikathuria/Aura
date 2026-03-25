@@ -41,6 +41,9 @@ Core schema + RLS baseline migration:
 RLS audit query (run in SQL editor when validating staging/prod):
 - `supabase/audits/rls_audit.sql`
 
+Content ops migration (events + admin backoffice RLS):
+- `supabase/migrations/20260325170000_content_ops_admin.sql`
+
 Set required Supabase secrets:
 ```bash
 npx supabase secrets set HUGGING_FACE_TOKEN=your_token_here
@@ -106,6 +109,25 @@ Required GitHub repository secrets:
 - `VERCEL_ORG_ID`
 - `VERCEL_PROJECT_ID_STAGING`
 - `VERCEL_PROJECT_ID_PRODUCTION`
+
+## Admin Backoffice
+
+- Route: `/admin`
+- Access: authenticated users with `users.isAdmin = true`
+- Scope: events/landmarks CRUD, publish/unpublish, soft delete, and action logs
+
+Grant admin access to a user (run in SQL editor):
+
+```sql
+update public.users
+set "isAdmin" = true
+where id = (
+  select id
+  from auth.users
+  where email = 'you@example.com'
+  limit 1
+);
+```
 
 ## AI Story Pipeline
 1. When a landmark is clicked, the app checks if a personalized story exists in `landmark_assets`.

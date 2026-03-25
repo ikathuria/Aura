@@ -19,6 +19,10 @@ export interface LocalEvent {
   description: string;
   type: 'festival' | 'market' | 'concert' | 'sports' | 'other';
   startTime: string;
+  isPublished?: boolean;
+  isDeleted?: boolean;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface Itinerary {
@@ -35,6 +39,9 @@ export interface Landmark {
   lng: number;
   description: string;
   type: LandmarkType;
+  isPublished?: boolean;
+  isDeleted?: boolean;
+  updatedAt?: string;
 }
 
 export interface UserProfile {
@@ -45,6 +52,7 @@ export interface UserProfile {
   personaTitle: string;
   hasOnboarded: boolean;
   createdAt: number;
+  isAdmin?: boolean;
 }
 
 export interface Unlock {
@@ -77,4 +85,14 @@ export interface AssetStatus {
   personaId: string;
   status: 'queued' | 'generating' | 'ready' | 'failed';
   updatedAt?: number;
+}
+
+export interface AdminActionLog {
+  id: string;
+  actorId: string;
+  action: string;
+  resourceType: string;
+  resourceId?: string | null;
+  payload: Record<string, unknown>;
+  createdAt: string;
 }
